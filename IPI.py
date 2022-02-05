@@ -15,7 +15,7 @@ strain_key=pandas.DataFrame({('x82', 'GN965', 'WT', 'LAM-2::mNG', 0),
                              ('x175', 'GN1060', 'WT', 'LAM-1::wSc', 0),
                              ('x87a', 'GN973', 'WT', 'NID-1::wSc', 0)
                              }, columns=['Strain_code','Strain', 'Allele','Label', 'n'])
-# strain_key=strain_key.set_index('Strain_code')
+
 
 sigma_bgf=10
 sigma_nf_2=20
@@ -26,6 +26,7 @@ N  = 2    # Filter order
 Wn = .2 # Cutoff frequency
 B, A = butter(N, Wn, output='ba')
 
+#define a custom function for calculating the neurite fluorescence from straightened neurite image
 def neurite_fluorescence(img):
     n = img[7:13, :]                       #extract rows to use for neurite
     bg = np.concatenate((img[0:5, :], img[15: , :]))   #extract rows to use for background
@@ -35,13 +36,13 @@ def neurite_fluorescence(img):
     for i in range(0,len(nf)): 
         if nf[i]<0: nf[i]=0
     
-    fnf_1 = filtfilt(B,A, nf)
-    fnf_2 = minimum_filter(nf, sigma_nf_2)
-    fnf_3 = gaussian_filter(fnf_2, sigma_nf_3)
-    fnf = fnf_1-fnf_3
+    fnf_1 = filtfilt(B,A, nf)                   #apply Butterworth filter to smooth the data
+    fnf_2 = minimum_filter(nf, sigma_nf_2)      #calculating the bottom edge of the signal
+    fnf_3 = gaussian_filter(fnf_2, sigma_nf_3)  #smoothing the bottom edge of the signal
+    fnf = fnf_1-fnf_3                           #subtracting the diffuse fluorescence from total fluorescence signal to obtain the the peak fluorescence that will be used for peak finding
     return(fnf_1,fnf_3,fnf)
 
-
+# define a custom function to calculate the minimum height cutoff for finding peaks
 def height_cutoff(fnf):
     avnoise = np.mean(fnf[fnf < np.percentile(fnf, 75)])
     stdnoise = np.std(fnf[fnf < np.percentile(fnf, 75)])
@@ -49,8 +50,8 @@ def height_cutoff(fnf):
     return(height)
 
 #%%
-fpath = 'G:/My Drive/ECM manuscript/github codes/IPI/sample_data/input_files/'
-dfpath = 'G:/My Drive/ECM manuscript/github codes/IPI/sample_data/output_files/'
+fpath = 'G:/My Drive/ECM manuscript/github codes/IPI/sample_data/input_files/'          #filepath to the input file location
+dfpath = 'G:/My Drive/ECM manuscript/github codes/IPI/sample_data/output_files/'        #destination filepath where output files will be created
 imgfiles = fnmatch.filter(os.listdir(fpath), '*.tif')
 toa = str(datetime.datetime.today()).split()
 today = toa[0]
